@@ -1,0 +1,57 @@
+---
+- name: set vars
+  set_fact:
+    docker_image: lscr.io/linuxserver/jellyfin
+    docker_container: jellyfin
+    docker_network: app-network
+
+- name: Create config directory
+  ansible.builtin.file:
+    path: "{{role_jellyfin_dir}}/config"
+    state: directory
+    owner: "{{role_jellyfin_puid}}"
+    group: "{{role_jellyfin_pgid}}"
+    mode: 0755
+
+- name: Ensure image is pulled
+  community.docker.docker_image:
+    name: "{{ docker_image }}"
+    source: pull
+    force_source: yes
+  register: pulled
+
+- name: Remove container
+  community.docker.docker_container:
+    name: "{{ docker_container }}"
+    state: absent
+  when: pulled.changed
+
+- name: Get infos on container
+  community.docker.docker_container_info:
+    name: "{{ docker_container }}"
+  register: result
+
+- name: Create network
+  community.docker.docker_network:
+    name: "{{ docker_network }}"
+    driver_options:
+          com.docker.network.bridge.name: "br-{{ docker_network }}"
+
+- name: Create jellyfin container
+  ansible.builtin.shell: |
+    docker run -d \
+    --name={{docker_container}} \
+    -e PUID={{role_jellyfin_puid}} \
+    -e PGID={{role_jellyfin_pgid}} \
+    -e TZ={{role_jellyfin_tz}} \
+    -e VERSION=docker \
+    -v {{role_jellyfin_dir}}/config:/config:Z \
+    -v {{role_jellyfin_media_dir}}:/media:Z \
+    --device=/dev/dri:/dev/dri \
+    --network={{docker_network}} \
+    --restart unless-stopped \
+    {{docker_image}}
+  when: 
+    pulled.changed
+    or
+    result.exists == false
