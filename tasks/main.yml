@@ -1,16 +1,22 @@
 ---
 - name: set vars
   set_fact:
-    docker_image: lscr.io/linuxserver/jellyfin
-    docker_container: jellyfin
-    docker_network: app-network
+    docker_image: '{{ role_jellyfin_image }}'
+    docker_container: '{{ role_jellyfin_container }}'
+    docker_puid: '{{ role_jellyfin_puid }}'
+    docker_pgid: '{{ role_jellyfin_pgid }}'
+    docker_tz: '{{ role_jellyfin_tz }}'
+    docker_dir: '{{ role_jellyfin_dir }}/config'
+    docker_network: '{{ role_jellyfin_network }}'
+    jellyfin_media: '{{ role_jellyfin_media_dir }}'
 
-- name: Create config directory
+
+- name: Create directory
   ansible.builtin.file:
-    path: "{{role_jellyfin_dir}}/config"
+    path: '{{docker_dir}}'
     state: directory
-    owner: "{{role_jellyfin_puid}}"
-    group: "{{role_jellyfin_pgid}}"
+    owner: '{{ docker_puid }}'
+    group: '{{ docker_pgid }}'
     mode: 0755
 
 - name: Ensure image is pulled
@@ -41,12 +47,12 @@
   ansible.builtin.shell: |
     docker run -d \
     --name={{docker_container}} \
-    -e PUID={{role_jellyfin_puid}} \
-    -e PGID={{role_jellyfin_pgid}} \
-    -e TZ={{role_jellyfin_tz}} \
+    -e PUID={{docker_puid}} \
+    -e PGID={{docker_pgid}} \
+    -e TZ={{docker_tz}} \
     -e VERSION=docker \
-    -v {{role_jellyfin_dir}}/config:/config:Z \
-    -v {{role_jellyfin_media_dir}}:/media:Z \
+    -v {{docker_dir}}:/config:Z \
+    -v {{jellyfin_media}}:/media:Z \
     --device=/dev/dri:/dev/dri \
     --network={{docker_network}} \
     --restart unless-stopped \
