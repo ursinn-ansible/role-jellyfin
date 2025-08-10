@@ -57,7 +57,7 @@
     --network={{docker_network}} \
     --restart unless-stopped \
     {{docker_image}}
-  when: 
+  when:
     pulled.changed
     or
     result.exists == false
